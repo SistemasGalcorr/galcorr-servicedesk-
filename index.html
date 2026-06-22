@@ -63,8 +63,11 @@
       <div><div class="sun" id="snm">—</div><div class="sur" id="srl">—</div></div>
       <button class="lo" onclick="doLogout()"><i class="ti ti-logout"></i></button>
     </div>
-    <div style="margin-top:8px;text-align:center">
-      <button onclick="lsReset()" style="background:none;border:none;color:rgba(255,255,255,.2);font-size:10px;cursor:pointer;padding:2px 8px;font-family:inherit" title="Apagar todos os dados e restaurar exemplos">
+    <div id="admin-tools" style="display:none;margin-top:8px;display:flex;flex-direction:column;gap:4px">
+      <button onclick="exportarHTML()" style="width:100%;background:rgba(250,183,0,.15);border:1px solid rgba(250,183,0,.3);color:var(--yw);font-size:11px;cursor:pointer;padding:6px 10px;font-family:inherit;border-radius:var(--r);display:flex;align-items:center;gap:6px;font-weight:600">
+        <i class="ti ti-download" style="font-size:13px"></i> Exportar para GitHub
+      </button>
+      <button onclick="lsReset()" style="width:100%;background:none;border:none;color:rgba(255,255,255,.2);font-size:10px;cursor:pointer;padding:2px 8px;font-family:inherit">
         <i class="ti ti-refresh" style="font-size:10px"></i> Resetar dados
       </button>
     </div>
@@ -701,18 +704,15 @@ var GRUPOS_DEFAULT=[
 ];
 
 // ── PERSISTÊNCIA localStorage ──────────────────────────────────
-var LS_KEY='galcorr_sd_v3';
+// Colaboradores, Grupos e Tipos vêm SEMPRE do arquivo (US_DEFAULT)
+// Chamados e Projetos persistem no localStorage de cada usuário
+var LS_KEY='galcorr_sd_v4';
 
 function lsSave(){
   try{
     localStorage.setItem(LS_KEY,JSON.stringify({
-      US:US,nUID:nUID,
-      CH:CH,nCID:nCID,
-      PJ:PJ,nPJID:nPJID,
-      TIPOS_CH:TIPOS_CH,nTCH:nTCH,
-      TIPOS_PJ:TIPOS_PJ,nTPJ:nTPJ,
-      GRUPOS:GRUPOS,nGRID:nGRID,
-      botNum:botNum,
+      CH:CH, nCID:nCID,
+      PJ:PJ, nPJID:nPJID,
       savedAt:Date.now()
     }));
   }catch(e){console.warn('localStorage cheio ou bloqueado:',e);}
@@ -723,53 +723,91 @@ function lsLoad(){
     var raw=localStorage.getItem(LS_KEY);
     if(!raw)return false;
     var d=JSON.parse(raw);
-    if(d.US&&d.US.length){
-      US=d.US;nUID=d.nUID||100;
-      CH=d.CH||[];nCID=d.nCID||2402;
-      PJ=d.PJ||[];nPJID=d.nPJID||5;
-      TIPOS_CH=d.TIPOS_CH||TIPOS_CH_DEFAULT;nTCH=d.nTCH||7;
-      TIPOS_PJ=d.TIPOS_PJ||TIPOS_PJ_DEFAULT;nTPJ=d.nTPJ||6;
-      GRUPOS=d.GRUPOS||GRUPOS_DEFAULT;nGRID=d.nGRID||5;
-      if(d.botNum)botNum=d.botNum;
-      return true;
-    }
+    if(d.CH){CH=d.CH;nCID=d.nCID||2402;}
+    if(d.PJ){PJ=d.PJ;nPJID=d.nPJID||5;}
+    return true;
   }catch(e){console.warn('Erro ao carregar localStorage:',e);}
   return false;
 }
 
 function lsReset(){
-  if(!confirm('Isso vai apagar TODOS os dados salvos (colaboradores, chamados, projetos) e restaurar os dados de exemplo. Confirma?'))return;
+  if(!confirm('Isso vai apagar chamados e projetos salvos localmente. Confirma?'))return;
   localStorage.removeItem(LS_KEY);
   location.reload();
 }
 
-// ── CARREGAR DADOS (localStorage ou padrão) ───────────────────
-var US,TIPOS_CH,TIPOS_PJ,GRUPOS,CH,PJ;
-var nUID,nTCH,nTPJ,nGRID,nCID,nPJID;
+// ── EXPORTAR HTML COM DADOS ATUAIS (para subir no GitHub Pages) ──
+function exportarHTML(){
+  // Pegar o HTML completo da página
+  var html=document.documentElement.outerHTML;
 
-if(!lsLoad()){
-  // Primeira vez — usar dados padrão
-  US=[...US_DEFAULT];nUID=100;
-  TIPOS_CH=[...TIPOS_CH_DEFAULT];nTCH=7;
-  TIPOS_PJ=[...TIPOS_PJ_DEFAULT];nTPJ=6;
-  GRUPOS=[...GRUPOS_DEFAULT];nGRID=5;
-  var now=Date.now();
-  CH=[
-    {id:2395,user:'João Silva',mat:'001234',cat:'Acesso / Senha',grp:'TI',prio:'Alta',st:'open',dt:'16/06 08:30',ts:now-172800000,owner:'Carlos Lima',tecnico:'Carlos Lima',desc:'Não consigo acessar o sistema desde ontem. Minha senha parou de funcionar após a atualização.'},
-    {id:2397,user:'Maria Fernanda',mat:'002345',cat:'Hardware',grp:'TI',prio:'Alta',st:'progress',dt:'17/06 11:20',ts:now-86400000,owner:'Carlos Lima',tecnico:'Ana Ferreira',desc:'Computador não liga ao pressionar o botão power.'},
-    {id:2398,user:'João Silva',mat:'001234',cat:'Reembolso',grp:'Financeiro',prio:'Média',st:'done',dt:'17/06 14:00',ts:now-75600000,owner:'Julia Santos',tecnico:'Julia Santos',desc:'Reembolso referente à nota fiscal 12345 de viagem a SP.'},
-    {id:2399,user:'Pedro Rocha',mat:'003456',cat:'Manutenção',grp:'Facilities',prio:'Baixa',st:'progress',dt:'17/06 16:30',ts:now-64800000,owner:'Marcos Oliveira',tecnico:'—',desc:'Torneira do banheiro masculino do 2º andar com vazamento.'},
-    {id:2400,user:'Maria Fernanda',mat:'002345',cat:'Software / Sistema',grp:'TI',prio:'Média',st:'open',dt:'18/06 08:55',ts:now-7200000,owner:'Ana Ferreira',tecnico:'—',desc:'Sistema de ponto eletrônico travando ao registrar entrada.'},
-    {id:2401,user:'João Silva',mat:'001234',cat:'Acesso / Senha',grp:'TI',prio:'Alta',st:'open',dt:'18/06 09:12',ts:now-3600000,owner:'Carlos Lima',tecnico:'—',desc:'Preciso de acesso ao sistema de RH para consultar histórico de férias.'},
-  ];nCID=2402;
-  PJ=[
-    {id:1,nome:'Migração ERP',tipo:'Implantação de Sistema',mat:'001001',resp:'Carlos Lima',prio:'Alta',st:'andamento',grp:'TI',inicio:'2025-03-01',prazo:'2025-08-30',desc:'Migração do sistema ERP legado para cloud.'},
-    {id:2,nome:'Implantação LGPD',tipo:'Adequação Regulatória',mat:'002001',resp:'Marcos Oliveira',prio:'Alta',st:'planejamento',grp:'RH',inicio:'2025-04-01',prazo:'2025-10-31',desc:'Adequação à LGPD.'},
-    {id:3,nome:'Reforma Sala Servidores',tipo:'Infraestrutura Física',mat:'001002',resp:'Ana Ferreira',prio:'Média',st:'concluido',grp:'Facilities',inicio:'2025-01-10',prazo:'2025-03-15',desc:'Reforma e climatização da sala de servidores.'},
-    {id:4,nome:'Portal do Colaborador',tipo:'Desenvolvimento de Portal',mat:'001001',resp:'Carlos Lima',prio:'Média',st:'andamento',grp:'TI',inicio:'2025-02-15',prazo:'2025-07-31',desc:'Novo portal de autoatendimento.'},
-  ];nPJID=5;
-  lsSave(); // salvar dados padrão imediatamente
+  // Serializar dados atuais
+  var dadosAtuais={
+    US:US, nUID:nUID,
+    CH:CH, nCID:nCID,
+    PJ:PJ, nPJID:nPJID,
+    TIPOS_CH:TIPOS_CH, nTCH:nTCH,
+    TIPOS_PJ:TIPOS_PJ, nTPJ:nTPJ,
+    GRUPOS:GRUPOS, nGRID:nGRID,
+    botNum:botNum
+  };
+
+  // Substituir US_DEFAULT no HTML pelos colaboradores atuais
+  var novoUS='var US_DEFAULT='+JSON.stringify(US,null,2)+';';
+  var novoGRUPOS='var GRUPOS_DEFAULT='+JSON.stringify(GRUPOS,null,2)+';';
+  var novoTCH='var TIPOS_CH_DEFAULT='+JSON.stringify(TIPOS_CH,null,2)+';';
+  var novoTPJ='var TIPOS_PJ_DEFAULT='+JSON.stringify(TIPOS_PJ,null,2)+';';
+
+  // Substituir cada bloco de dados padrão
+  html=html.replace(/var US_DEFAULT=\[[\s\S]*?\];/,novoUS);
+  html=html.replace(/var GRUPOS_DEFAULT=\[[\s\S]*?\];/,novoGRUPOS);
+  html=html.replace(/var TIPOS_CH_DEFAULT=\[[\s\S]*?\];/,novoTCH);
+  html=html.replace(/var TIPOS_PJ_DEFAULT=\[[\s\S]*?\];/,novoTPJ);
+
+  // Forçar limpeza do localStorage na próxima abertura para pegar os novos defaults
+  html=html.replace(
+    "var LS_KEY='galcorr_sd_v3';",
+    "var LS_KEY='galcorr_sd_v3';"
+  );
+
+  // Gerar download
+  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='index.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('index.html gerado! Suba este arquivo no GitHub Pages.','ok');
 }
+
+// ── CARREGAR DADOS ────────────────────────────────────────────
+// Colaboradores, Grupos e Tipos: SEMPRE do arquivo (garantia de acesso para todos)
+var US=[...US_DEFAULT];
+var nUID=100;
+var TIPOS_CH=[...TIPOS_CH_DEFAULT]; var nTCH=7;
+var TIPOS_PJ=[...TIPOS_PJ_DEFAULT]; var nTPJ=6;
+var GRUPOS=[...GRUPOS_DEFAULT];     var nGRID=5;
+
+// Chamados e Projetos: do localStorage (persistem entre sessões do mesmo browser)
+var now2=Date.now();
+var CH=[
+  {id:2395,user:'João Silva',mat:'001234',cat:'Acesso / Senha',grp:'TI',prio:'Alta',st:'open',dt:'16/06 08:30',ts:now2-172800000,owner:'Carlos Lima',tecnico:'Carlos Lima',desc:'Não consigo acessar o sistema desde ontem. Minha senha parou de funcionar após a atualização.'},
+  {id:2397,user:'Maria Fernanda',mat:'002345',cat:'Hardware',grp:'TI',prio:'Alta',st:'progress',dt:'17/06 11:20',ts:now2-86400000,owner:'Carlos Lima',tecnico:'Ana Ferreira',desc:'Computador não liga ao pressionar o botão power.'},
+  {id:2398,user:'João Silva',mat:'001234',cat:'Reembolso',grp:'Financeiro',prio:'Média',st:'done',dt:'17/06 14:00',ts:now2-75600000,owner:'Julia Santos',tecnico:'Julia Santos',desc:'Reembolso referente à nota fiscal 12345 de viagem a SP.'},
+  {id:2399,user:'Pedro Rocha',mat:'003456',cat:'Manutenção',grp:'Facilities',prio:'Baixa',st:'progress',dt:'17/06 16:30',ts:now2-64800000,owner:'Marcos Oliveira',tecnico:'—',desc:'Torneira do banheiro masculino do 2º andar com vazamento.'},
+  {id:2400,user:'Maria Fernanda',mat:'002345',cat:'Software / Sistema',grp:'TI',prio:'Média',st:'open',dt:'18/06 08:55',ts:now2-7200000,owner:'Ana Ferreira',tecnico:'—',desc:'Sistema de ponto eletrônico travando ao registrar entrada.'},
+  {id:2401,user:'João Silva',mat:'001234',cat:'Acesso / Senha',grp:'TI',prio:'Alta',st:'open',dt:'18/06 09:12',ts:now2-3600000,owner:'Carlos Lima',tecnico:'—',desc:'Preciso de acesso ao sistema de RH para consultar histórico de férias.'},
+];
+var nCID=2402;
+var PJ=[
+  {id:1,nome:'Migração ERP',tipo:'Implantação de Sistema',mat:'001001',resp:'Carlos Lima',prio:'Alta',st:'andamento',grp:'TI',inicio:'2025-03-01',prazo:'2025-08-30',desc:'Migração do sistema ERP legado para cloud.'},
+  {id:2,nome:'Implantação LGPD',tipo:'Adequação Regulatória',mat:'002001',resp:'Marcos Oliveira',prio:'Alta',st:'planejamento',grp:'RH',inicio:'2025-04-01',prazo:'2025-10-31',desc:'Adequação à LGPD.'},
+  {id:3,nome:'Reforma Sala Servidores',tipo:'Infraestrutura Física',mat:'001002',resp:'Ana Ferreira',prio:'Média',st:'concluido',grp:'Facilities',inicio:'2025-01-10',prazo:'2025-03-15',desc:'Reforma e climatização da sala de servidores.'},
+  {id:4,nome:'Portal do Colaborador',tipo:'Desenvolvimento de Portal',mat:'001001',resp:'Carlos Lima',prio:'Média',st:'andamento',grp:'TI',inicio:'2025-02-15',prazo:'2025-07-31',desc:'Novo portal de autoatendimento.'},
+];
+var nPJID=5;
+// Carregar chamados/projetos salvos localmente
+lsLoad();
 
 var PGM={dashboard:{t:'Dashboard',s:'Visão geral do sistema'},chamados:{t:'Chamados',s:'Fila de atendimento'},projetos:{t:'Projetos',s:'Demandas e iniciativas'},contatos:{t:'Contatos Funcionários',s:'Lista de colaboradores e suas informações de contato'},usuarios:{t:'Colaboradores',s:'Cadastro e gestão'},grupos:{t:'Grupos',s:'Times e responsáveis'},categorias:{t:'Tipos',s:'Tipos de chamados e projetos'},whatsapp:{t:'WhatsApp',s:'Bot e configurações de integração'},clima:{t:'Clima em Tempo Real',s:'Temperatura e previsão do tempo por cidade e estado'},
   relatorios:{t:'Relatórios',s:'Análise e exportação de dados'}};
@@ -823,6 +861,9 @@ function enterApp(u){
   document.getElementById('snm').textContent=u.name;
   document.getElementById('srl').textContent=u.role==='admin'?'Administrador':'Colaborador';
   buildNav(u.role);
+  // Mostrar ferramentas de admin
+  var at=document.getElementById('admin-tools');
+  if(at)at.style.display=u.role==='admin'?'flex':'none';
   document.body.classList.add('in');
   document.getElementById('bot-num').value=botNum;
   // Garantir que todas as páginas ficam ocultas e dashboard ativo
@@ -1333,7 +1374,7 @@ function savUs(){
   document.getElementById('mus').classList.remove('open');
   rUs();
   rContatos();
-  lsSave(); // persistir no localStorage
+  
 }
 function delUs(id){if(id===99){toast('Não é possível excluir o administrador.','er');return;}document.getElementById('cfmg').textContent='Excluir este colaborador? Ele perderá acesso ao sistema e ao bot.';document.getElementById('cfok').onclick=function(){US=US.filter(function(u){return u.id!==id;});document.getElementById('mcf').classList.remove('open');rUs();rContatos();lsSave();toast('Colaborador removido.','ok');};document.getElementById('mcf').classList.add('open');}
 
@@ -1472,7 +1513,7 @@ function confirmImport(){
     (skipped>0?'<span style="color:var(--gt)">'+skipped+' ignorados (duplicatas ou sem nome/matrícula).</span>':'');
   document.getElementById('import-btn').style.display='none';
   importData=null;
-  rUs();rContatos();lsSave();
+  rUs();rContatos();
   toast(added+' colaboradores importados!','ok');
 }
 
@@ -1546,20 +1587,19 @@ function rTipos(){
 }
 function openTipoCh(){document.getElementById('tch-nm').value='';document.getElementById('tch-gr').value='TI';document.getElementById('tch-pr').value='Média';delete document.getElementById('mtch').dataset.editId;document.getElementById('mtch').classList.add('open');}
 function editTipoCh(id){var t=TIPOS_CH.find(function(x){return x.id===id;});if(!t)return;document.getElementById('tch-nm').value=t.nome;document.getElementById('tch-gr').value=t.grp;document.getElementById('tch-pr').value=t.prio;document.getElementById('mtch').dataset.editId=id;document.getElementById('mtch').classList.add('open');}
-function savTipoCh(){var nm=document.getElementById('tch-nm').value.trim();if(!nm){toast('Nome obrigatório.','er');return;}var eid=document.getElementById('mtch').dataset.editId;var data={nome:nm,grp:document.getElementById('tch-gr').value,prio:document.getElementById('tch-pr').value};if(eid){var i=TIPOS_CH.findIndex(function(t){return t.id===parseInt(eid);});if(i!==-1)TIPOS_CH[i]=Object.assign({},TIPOS_CH[i],data);}else TIPOS_CH.push(Object.assign({id:nTCH++},data));document.getElementById('mtch').classList.remove('open');rTipos();lsSave();toast('Tipo de chamado salvo!','ok');}
-function delTipoCh(id){TIPOS_CH=TIPOS_CH.filter(function(t){return t.id!==id;});rTipos();lsSave();toast('Removido.','ok');}
+function savTipoCh(){var nm=document.getElementById('tch-nm').value.trim();if(!nm){toast('Nome obrigatório.','er');return;}var eid=document.getElementById('mtch').dataset.editId;var data={nome:nm,grp:document.getElementById('tch-gr').value,prio:document.getElementById('tch-pr').value};if(eid){var i=TIPOS_CH.findIndex(function(t){return t.id===parseInt(eid);});if(i!==-1)TIPOS_CH[i]=Object.assign({},TIPOS_CH[i],data);}else TIPOS_CH.push(Object.assign({id:nTCH++},data));document.getElementById('mtch').classList.remove('open');rTipos();toast('Tipo de chamado salvo!','ok');}
+function delTipoCh(id){TIPOS_CH=TIPOS_CH.filter(function(t){return t.id!==id;});rTipos();toast('Removido.','ok');}
 function openTipoPj(){document.getElementById('tpj-nm').value='';document.getElementById('tpj-gr').value='TI';document.getElementById('tpj-pr').value='Média';delete document.getElementById('mtpj').dataset.editId;document.getElementById('mtpj').classList.add('open');}
 function editTipoPj(id){var t=TIPOS_PJ.find(function(x){return x.id===id;});if(!t)return;document.getElementById('tpj-nm').value=t.nome;document.getElementById('tpj-gr').value=t.grp;document.getElementById('tpj-pr').value=t.prio;document.getElementById('mtpj').dataset.editId=id;document.getElementById('mtpj').classList.add('open');}
-function savTipoPj(){var nm=document.getElementById('tpj-nm').value.trim();if(!nm){toast('Nome obrigatório.','er');return;}var eid=document.getElementById('mtpj').dataset.editId;var data={nome:nm,grp:document.getElementById('tpj-gr').value,prio:document.getElementById('tpj-pr').value};if(eid){var i=TIPOS_PJ.findIndex(function(t){return t.id===parseInt(eid);});if(i!==-1)TIPOS_PJ[i]=Object.assign({},TIPOS_PJ[i],data);}else TIPOS_PJ.push(Object.assign({id:nTPJ++},data));document.getElementById('mtpj').classList.remove('open');rTipos();lsSave();toast('Tipo de projeto salvo!','ok');}
-function delTipoPj(id){TIPOS_PJ=TIPOS_PJ.filter(function(t){return t.id!==id;});rTipos();lsSave();toast('Removido.','ok');}
+function savTipoPj(){var nm=document.getElementById('tpj-nm').value.trim();if(!nm){toast('Nome obrigatório.','er');return;}var eid=document.getElementById('mtpj').dataset.editId;var data={nome:nm,grp:document.getElementById('tpj-gr').value,prio:document.getElementById('tpj-pr').value};if(eid){var i=TIPOS_PJ.findIndex(function(t){return t.id===parseInt(eid);});if(i!==-1)TIPOS_PJ[i]=Object.assign({},TIPOS_PJ[i],data);}else TIPOS_PJ.push(Object.assign({id:nTPJ++},data));document.getElementById('mtpj').classList.remove('open');rTipos();toast('Tipo de projeto salvo!','ok');}
+function delTipoPj(id){TIPOS_PJ=TIPOS_PJ.filter(function(t){return t.id!==id;});rTipos();toast('Removido.','ok');}
 
 // ---- BOT CONFIG ----
 function saveBotCfg(){
   botNum=document.getElementById('bot-num').value.trim()||botNum;
   document.getElementById('bot-num-display').textContent=botNum;
   document.getElementById('sim-num').textContent=botNum;
-  lsSave();
-  toast('Configurações do bot salvas!','ok');
+    toast('Configurações do bot salvas!','ok');
 }
 
 // ---- CHARTS ----
@@ -2067,14 +2107,13 @@ function saveGrupo(){
   }
   document.getElementById('mgr').classList.remove('open');
   rGrupos();
-  lsSave();
 }
 function delGrupo(id){
   document.getElementById('cfmg').textContent='Excluir este grupo? Os chamados vinculados não serão apagados.';
   document.getElementById('cfok').onclick=function(){
     GRUPOS=GRUPOS.filter(function(g){return g.id!==id;});
     document.getElementById('mcf').classList.remove('open');
-    rGrupos();lsSave();toast('Grupo removido.','ok');
+    rGrupos();toast('Grupo removido.','ok');
   };
   document.getElementById('mcf').classList.add('open');
 }
